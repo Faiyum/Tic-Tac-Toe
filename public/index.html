@@ -1,0 +1,30 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tic Tac Toe Multiplayer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="menu">
+    <h1>Tic Tac Toe</h1>
+    <button onclick="startOnline()">Play Online</button>
+    <button onclick="startFriend()">Play with Friends</button>
+    <button onclick="startAI()">Play with AI</button>
+  </div>
+
+  <div id="game" class="hidden">
+    <h2 id="status">Connecting...</h2>
+    <div id="board"></div>
+    <div id="score">
+      <p><strong>Wins:</strong> <span id="wins">0</span></p>
+      <p><strong>Losses:</strong> <span id="losses">0</span></p>
+      <p><strong>Draws:</strong> <span id="draws">0</span></p>
+    </div>
+    <button onclick="goToMenu()">Back to Menu</button>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
