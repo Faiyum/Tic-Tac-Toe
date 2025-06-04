@@ -1,30 +1,109 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Tic Tac Toe Multiplayer</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multiplayer Tic Tac Toe</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background: #f0f0f0; }
+    h1 { margin-top: 30px; }
+    #menu, #game { margin-top: 20px; }
+    #board { display: grid; grid-template-columns: repeat(3, 100px); gap: 5px; justify-content: center; margin-top: 20px; }
+    .cell {
+      width: 100px; height: 100px; background: white; border: 1px solid #ccc;
+      font-size: 2em; display: flex; align-items: center; justify-content: center;
+    }
+    #roomInput { padding: 5px; width: 150px; margin-top: 10px; }
+  </style>
 </head>
 <body>
+  <h1>Multiplayer Tic Tac Toe</h1>
+
   <div id="menu">
-    <h1>Tic Tac Toe</h1>
-    <button onclick="startOnline()">Play Online</button>
-    <button onclick="startFriend()">Play with Friends</button>
-    <button onclick="startAI()">Play with AI</button>
+    <button onclick="createRoom()">Create Room</button>
+    <button onclick="joinRoom()">Join Room</button>
+    <input type="text" id="roomInput" placeholder="Enter Room Code">
+    <p id="roomStatus"></p>
   </div>
 
-  <div id="game" class="hidden">
-    <h2 id="status">Connecting...</h2>
+  <div id="game" style="display: none;">
+    <p id="status"></p>
     <div id="board"></div>
-    <div id="score">
-      <p><strong>Wins:</strong> <span id="wins">0</span></p>
-      <p><strong>Losses:</strong> <span id="losses">0</span></p>
-      <p><strong>Draws:</strong> <span id="draws">0</span></p>
-    </div>
-    <button onclick="goToMenu()">Back to Menu</button>
   </div>
 
-  <script src="game.js"></script>
+  <script>
+    let socket;
+    let playerSymbol;
+    let gameActive = false;
+
+    function createBoard() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.index = i;
+        cell.addEventListener('click', () => {
+          if (!gameActive) return;
+          socket.send(JSON.stringify({ type: 'move', index: i }));
+        });
+        board.appendChild(cell);
+      }
+    }
+
+    function createRoom() {
+      socket = new WebSocket('wss://tic-tac-toe-dusky-five-49.vercel.app');
+      socket.onopen = () => {
+        socket.send(JSON.stringify({ type: 'create' }));
+      };
+      socket.onmessage = handleMessage;
+    }
+
+    function joinRoom() {
+      const code = document.getElementById('roomInput').value.toUpperCase();
+      if (!code) return alert("Enter a room code");
+      socket = new WebSocket('wss://your-backend-url.onrender.com');
+      socket.onopen = () => {
+        socket.send(JSON.stringify({ type: 'join', room: code }));
+      };
+      socket.onmessage = handleMessage;
+    }
+
+    function handleMessage(event) {
+      const data = JSON.parse(event.data);
+      console.log("Received:", data);
+
+      if (data.type === 'roomCreated') {
+        document.getElementById('roomStatus').innerText = `Room Created: ${data.room}`;
+        document.getElementById('status').innerText = 'Waiting for an opponent...';
+      }
+
+      if (data.type === 'start') {
+        document.getElementById('menu').style.display = 'none';
+        document.getElementById('game').style.display = 'block';
+        createBoard();
+        gameActive = true;
+        playerSymbol = data.player;
+      }
+
+      if (data.type === 'status') {
+        document.getElementById('status').innerText = data.message;
+      }
+
+      if (data.type === 'move') {
+        const cells = document.getElementsByClassName('cell');
+        cells[data.index].innerText = data.player;
+      }
+
+      if (data.type === 'gameover') {
+        gameActive = false;
+        document.getElementById('status').innerText = data.winner ? `Player ${data.winner} wins!` : 'Draw!';
+      }
+
+      if (data.type === 'error') {
+        alert(data.message);
+      }
+    }
+  </script>
 </body>
 </html>
