@@ -3,34 +3,44 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnPlayOnline = document.getElementById('btnPlayOnline');
   const btnCreateRoom = document.getElementById('btnCreateRoom');
   const btnJoinRoom = document.getElementById('btnJoinRoom');
-  const btnResetStats = document.getElementById('btnResetStats');
+  const btnResetStats = document.getElementById('reset-stats'); // fixed id here
   const roomCodeInput = document.getElementById('roomCodeInput');
   const menuMsg = document.getElementById('menuMsg');
-  const boardCells = document.querySelectorAll('.cell');
-  const statusText = document.getElementById('statusText');
-  const scoreboardX = document.getElementById('scoreX');
-  const scoreboardO = document.getElementById('scoreO');
-  const scoreboardDraw = document.getElementById('scoreDraw');
+  const board = document.getElementById('board'); // container for cells
+  const statusText = document.getElementById('status'); // fixed id
+  const scoreboardWins = document.getElementById('wins'); // fixed id
+  const scoreboardLosses = document.getElementById('losses'); // fixed id
+  const scoreboardDraws = document.getElementById('draws'); // fixed id
 
   let socket = null;
   let roomCode = '';
   let playerSymbol = '';
   let isMyTurn = false;
-  let board = ['', '', '', '', '', '', '', '', ''];
+  let boardState = Array(9).fill('');
   let gameActive = false;
 
-  // Disable create/join buttons initially
-  btnCreateRoom.disabled = true;
-  btnJoinRoom.disabled = true;
+  // Create 9 cells dynamically
+  function createBoard() {
+    board.innerHTML = '';
+    for (let i = 0; i < 9; i++) {
+      const cell = document.createElement('div');
+      cell.classList.add('cell');
+      cell.dataset.index = i;
+      board.appendChild(cell);
+    }
+  }
+
+  createBoard();
+
+  const boardCells = document.querySelectorAll('.cell');
 
   // --- Helper Functions ---
-
   function setStatus(text) {
     statusText.textContent = text;
   }
 
   function resetBoard() {
-    board.fill('');
+    boardState.fill('');
     boardCells.forEach(cell => {
       cell.textContent = '';
       cell.classList.remove('win');
@@ -39,29 +49,30 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateScoreboard(winner) {
-    let x = parseInt(localStorage.getItem('winsX') || '0');
-    let o = parseInt(localStorage.getItem('winsO') || '0');
-    let d = parseInt(localStorage.getItem('draws') || '0');
+    let wins = parseInt(localStorage.getItem('wins') || '0');
+    let losses = parseInt(localStorage.getItem('losses') || '0');
+    let draws = parseInt(localStorage.getItem('draws') || '0');
 
-    if (winner === 'X') {
-      x++;
-      localStorage.setItem('winsX', x);
-    } else if (winner === 'O') {
-      o++;
-      localStorage.setItem('winsO', o);
+    if (winner === playerSymbol) {
+      wins++;
+      localStorage.setItem('wins', wins);
+    } else if (winner && winner !== playerSymbol) {
+      losses++;
+      localStorage.setItem('losses', losses);
     } else {
-      d++;
-      localStorage.setItem('draws', d);
+      draws++;
+      localStorage.setItem('draws', draws);
     }
-    scoreboardX.textContent = x;
-    scoreboardO.textContent = o;
-    scoreboardDraw.textContent = d;
+
+    scoreboardWins.textContent = wins;
+    scoreboardLosses.textContent = losses;
+    scoreboardDraws.textContent = draws;
   }
 
   function loadScoreboard() {
-    scoreboardX.textContent = localStorage.getItem('winsX') || '0';
-    scoreboardO.textContent = localStorage.getItem('winsO') || '0';
-    scoreboardDraw.textContent = localStorage.getItem('draws') || '0';
+    scoreboardWins.textContent = localStorage.getItem('wins') || '0';
+    scoreboardLosses.textContent = localStorage.getItem('losses') || '0';
+    scoreboardDraws.textContent = localStorage.getItem('draws') || '0';
   }
 
   function highlightWinLine(indices) {
@@ -70,12 +81,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function checkWin(player) {
     const winConditions = [
-      [0,1,2], [3,4,5], [6,7,8],
-      [0,3,6], [1,4,7], [2,5,8],
-      [0,4,8], [2,4,6]
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
     ];
     for (const condition of winConditions) {
-      if (condition.every(i => board[i] === player)) {
+      if (condition.every(i => boardState[i] === player)) {
         highlightWinLine(condition);
         return true;
       }
@@ -84,15 +95,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function checkDraw() {
-    return board.every(cell => cell !== '');
+    return boardState.every(cell => cell !== '');
   }
 
   // --- WebSocket connection and room management ---
 
   function connectToServer() {
-    if (socket) {
-      socket.close();
-    }
+    if (socket) socket.close();
     socket = new WebSocket('ws://' + window.location.hostname + ':8080');
 
     menuMsg.textContent = 'Connecting to server... Please wait.';
@@ -118,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setStatus(isMyTurn ? "Your turn" : "Opponent's turn");
         gameActive = true;
       } else if (msg.type === 'move') {
-        board[msg.index] = msg.player;
+        boardState[msg.index] = msg.player;
         boardCells[msg.index].textContent = msg.player;
         if (msg.player !== playerSymbol) {
           isMyTurn = true;
@@ -193,8 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   btnResetStats.onclick = () => {
-    localStorage.removeItem('winsX');
-    localStorage.removeItem('winsO');
+    localStorage.removeItem('wins');
+    localStorage.removeItem('losses');
     localStorage.removeItem('draws');
     loadScoreboard();
     menuMsg.textContent = 'Stats reset.';
@@ -202,13 +211,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   boardCells.forEach((cell, idx) => {
     cell.addEventListener('click', () => {
-      if (!gameActive || !isMyTurn || board[idx] !== '') return;
-      board[idx] = playerSymbol;
+      if (!gameActive || !isMyTurn || boardState[idx] !== '') return;
+      boardState[idx] = playerSymbol;
       cell.textContent = playerSymbol;
       isMyTurn = false;
       setStatus("Opponent's turn");
       socket.send(JSON.stringify({ type: 'move', index: idx }));
-      // Add your win-check or animations here if needed
     });
   });
 
