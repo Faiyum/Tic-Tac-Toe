@@ -100,9 +100,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- WebSocket connection and room management ---
 
-  function connectToServer() {
-    if (socket) socket.close();
-    socket = new WebSocket('ws://' + window.location.hostname + ':8080');
+// Replace with your actual WebSocket server URL:
+const WS_SERVER_URL = 'wss://tic-tac-toe-faiyums-projects.vercel.app';
+
+function connectToServer() {
+  socket = new WebSocket(WS_SERVER_URL);
+  ...
+}
+
 
     menuMsg.textContent = 'Connecting to server... Please wait.';
     btnCreateRoom.disabled = true;
