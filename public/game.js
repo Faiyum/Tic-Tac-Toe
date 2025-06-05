@@ -1,3 +1,5 @@
+document.addEventListener('DOMContentLoaded', () => {
+
 // --- DOM Elements ---
 const btnPlayOnline = document.getElementById('btnPlayOnline');
 const btnCreateRoom = document.getElementById('btnCreateRoom');
@@ -219,4 +221,7 @@ setStatus('Click Play Online to connect');
 menuMsg.textContent = 'Ready to play!';
 
 // Responsive and animation code assumed unchanged, keep your existing code here.
+
+
+  });
 
